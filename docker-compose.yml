@@ -1,0 +1,33 @@
+services:
+  gluetun:
+    image: qmcgaw/gluetun
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - VPN_SERVICE_PROVIDER=nordvpn
+      - VPN_TYPE=openvpn
+      - OPENVPN_USER=${NORDVPN_OPENVPN_USER}
+      - OPENVPN_PASSWORD=${NORDVPN_OPENVPN_PASSWORD}
+      - SERVER_COUNTRIES=${NORDVPN_SERVER_COUNTRIES}
+  tailscale:
+    image: tailscale/tailscale:latest
+    network_mode: "service:gluetun"
+    restart: unless-stopped
+    cap_add:
+      - net_admin
+      - sys_module
+    volumes:
+      - ${PWD}/tailscale:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    environment:
+      - TS_AUTHKEY=${TAILSCALE_AUTHKEY}
+      - TS_EXTRA_ARGS=--advertise-exit-node
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_USERSPACE=true
+      - TS_HOSTNAME=${TAILSCALE_HOSTNAME}
+    depends_on:
+      gluetun:
+        condition: service_healthy
